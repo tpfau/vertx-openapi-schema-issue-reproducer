@@ -1,0 +1,30 @@
+{
+  "UUID": "507f1f77bcf86cd799439011",
+  "name": "Name of the , this cannot be changed after creation.",
+  "version": "dd6de3fddf28e769ef80808db277608ae9b76ead",
+  "tag": "string",
+  "private": true,
+  "elements": [
+    {
+      "elementType": "string",
+      "data": {
+        "UUID": "507f1f77bcf86cd799439011",
+        "name": "Name of the , this cannot be changed after creation.",
+        "version": "dd6de3fddf28e769ef80808db277608ae9b76ead",
+        "tag": "string",
+        "private": true,
+        "instanceID": "t83297d7785fd249bdb6543a850680e812ce11873df2d48467cb9612dbd0482bf",
+        "filter": "Task1.output1 * Task2.output2 > 4",
+        "outputs": [
+          "output1"
+        ],
+        "next": "t83297d7785fd249bdb6543a850680e812ce11873df2d48467cb9612dbd0482bf",
+        "codeType": {
+          "language": "qmarkup",
+          "version": "1.0"
+        }
+      }
+    }
+  ],
+  "randomize": true
+}

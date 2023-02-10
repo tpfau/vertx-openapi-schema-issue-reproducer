@@ -1,0 +1,268 @@
+openapi: 3.0.0
+servers:
+  # Added by API Auto Mocking Plugin
+  - description: Soile Backend API
+    url: soile.nbe.aalto.fi
+info:
+  description: This is the Backend API for the Soile webservice.
+  version: "1.0.0"
+  title: Soile Backend API
+  contact:
+    email: thomas.pfau@aalto.fi
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+tags:
+  - name: exeriment
+    description: Operations associated with experiments
+paths:
+  /experiment/{id}/{version}:
+    post:
+      tags:
+        - experiment
+      summary: Update a experiment 
+      operationId: updateExperiment
+      description: Updates the The experiment with the provided 
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: UUID of the experiment
+          schema:
+            type : string
+            
+        - name: version
+          in: path
+          required: true
+          description: version of the experiment to update, this will make this version the latest version.
+          schema:
+            type : string
+            
+      responses:
+        '200':
+          $ref: '#/components/responses/ObjectUpdated'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '400':
+          description: 'invalid input, object invalid'
+        '403':
+          description: User has no authorization to make this call 
+        '410':
+          $ref: '#/components/responses/ResourceDoesNotExist'
+      requestBody:
+        content:
+          application/json:
+            schema:
+             $ref: '#/components/schemas/Experiment'
+        description: In addition to the required fields, this submission also needs a tag. Otherwise the only way to obtain this version again is by providing the returned version id.          
+components:
+  schemas:
+    
+    BasicElementData:
+      type: object
+      properties:
+        UUID:
+          type: string
+          description: Has to have the form of a uuid (from a mongoDB ID)
+          example: 507f1f77bcf86cd799439011
+        name:
+          type: string
+          example: Name of the , this cannot be changed after creation. 
+        version:
+          type: string
+          description: This is the version (in form of a githash) of this element. When submitting a new version this field should be empty. It is however provided when requesting a specific version.
+          example: dd6de3fddf28e769ef80808db277608ae9b76ead
+        tag:
+          type: string
+          description: A Tag that either is assciated with the given version, or should be associated with it. When submitted with an update, the corresponding version will be tagged with this tag.
+        private: 
+          type: boolean
+          description: Whether this element is private or generally accessible. If not set, can be accessed by anyone.
+           
+
+    TaskInstance:
+      allOf:
+        - $ref: '#/components/schemas/BasicElementData'
+        - type: object
+          properties:
+            instanceID:
+              type: string
+              example: t83297d7785fd249bdb6543a850680e812ce11873df2d48467cb9612dbd0482bf
+              description: The Unique ID of this element within its project. This is a string of the form "\w + sha256" where \w depends on the type of object. (e.g. t for task, e for experiment etc.) This ID must be unique for each element (or subelement in a project and in an experiment. i.e. two experiments in the same project cannot have elements with the same instanceID)
+            filter: 
+              type: string
+              example: Task1.output1 * Task2.output2 > 4
+              description: A Filter that indicates whether this task will be run. Must refer to output elements specified in other Tasks. This must be a valid mathematical formula that can be parsed.
+            outputs:
+              type: array
+              items:
+                type: string
+                example: output1
+              description: All outputs that this task provides which should be available for filtering outside this task within its project. Must be outputs generated in this task!
+            next:
+              type: string
+              example: t83297d7785fd249bdb6543a850680e812ce11873df2d48467cb9612dbd0482bf
+              description: Which element to perform after this task, cannot point back to itself! And will only be present in instances not in the generation step. This has the same
+                This will need to opint to an instanceID of another task or experiment. 
+            codeType:
+              type: object
+              properties:
+                language:
+                  type: string
+                  description: the code type (javascript for psychoJS, qmarkup or elang for soile questionaire markup and experiment language)
+                  example: "qmarkup"
+                version: 
+                  type: string
+                  description: the version of the code type.
+                  example: "1.0"
+              
+    FilterInstance:
+      type: object
+      required: 
+        - defaultNext
+      properties:
+        options: 
+          description: Filters participants into one of the available options. 
+                       filters should be mutually exclusive otherwise no guarantee is given as to which fitting filter will be used.
+          type: array
+          items: 
+            type: object
+            properties: 
+              filter: 
+                type: string
+                example: TaskInstanceID1.output1 * TaskInstanceID2.output2 > 4
+                description: A Filter that indicates whether the next element used is the next of this item. Filter should be mutually exclusive
+              next: 
+                type: string
+                example: t83297d7785fd249bdb6543a850680e812ce11873df2d48467cb9612dbd0482bf
+                description: Which element to perform after this task, cannot point back to itself! And will only be present in instances not in the generation step. This has the same
+                  This will need to opint to an instanceID of another task or experiment.
+        defaultOption:
+          type: string
+          example: t83297d7785fd249bdb6543a850680e812ce11873df2d48467cb9612dbd0482bf
+          description: Which element to perform after this Filter if no option fits the given user. If this is empty, or doesn't exist, the assumption is that this is the end of the element (i.e. in an experiment, it points back to the experiment, or in a project it indicates that this project is finished after this filter). If in an experiment in a project, this must point to the experiment if it is the last entry in the experiment (i.e. it can't be empty)
+        instanceID:
+          type: string
+          example: t83297d7785fd249bdb6543a850680e812ce11873df2d48467cb9612dbd0482bf
+          description: The Unique ID of this element within its project. This is a string of the form "\w + sha256" where \w depends on the type of object. (e.g. t for task, e for experiment etc.) This ID must be unique for each element (or subelement in a project and in an experiment. i.e. two experiments in the same project cannot have elements with the same instanceID)
+    Experiment:
+      allOf:
+        - $ref: '#/components/schemas/BasicElementData'
+        - $ref: '#/components/schemas/ExperimentProperties'
+      description: An experiment, either a general Experiment or an instance within a project.              
+              
+    ExperimentInstance:
+      allOf:
+        - $ref: '#/components/schemas/BasicElementData'
+        - $ref: '#/components/schemas/ExperimentProperties'
+        - type: object
+          properties:
+            next:
+              type: string
+              example: t83297d7785fd249bdb6543a850680e812ce11873df2d48467cb9612dbd0482bf
+              description: Which element to perform after this task, cannot point back to itself! And will only be present in instances not in the generation step. This has the same
+                This will need to opint to an instanceID of another task or experiment.
+            instanceID:
+              type: string
+              example: t83297d7785fd249bdb6543a850680e812ce11873df2d48467cb9612dbd0482bf
+              description: The Unique ID of this element within its project. This is a string of the form "\w + sha256" where \w depends on the type of object. (e.g. t for task, e for experiment etc.) This ID must be unique for each element (or subelement in a project and in an experiment. i.e. two experiments in the same project cannot have elements with the same instanceID)                 
+    ExperimentProperties:
+      type: object
+      properties:
+        elements:
+          type: array
+          items:
+            type: object
+            properties: 
+              elementType: 
+                type: string
+                description: either "experiment" or "task" or "filter"
+              data:
+                description: one of either task or experiment or filter (as defined by the elementtype). Experiments are expected to be not nested for more than one level. The first element in this 
+                oneOf:
+                  - $ref: '#/components/schemas/TaskInstance'
+                  - $ref: '#/components/schemas/SubExperiment'
+                  - $ref: '#/components/schemas/FilterInstance'
+          description: Instances of tasks, further experiments or Filters, need to have instance IDs etc pp project back-reference, etc. The first element in this list will be assumed to be the starting element for this Experiment. Any element that does NOT have a next element being set will be assumed to be an end element. After which the instantiated experiments "next" element is called.
+        randomize: 
+          type: boolean
+          description: Whether the order of execution of the tasks in this experiment is randomized. If they are, no item in elements is allowed to be a filter. If randomized, all tasks and experiments in this experiment must point to this experiment as their next item. 
+    SubExperiment:
+      allOf:
+        - $ref: '#/components/schemas/BasicElementData'
+        - $ref: '#/components/schemas/SubExperimentProperties'
+        - type: object
+          properties:
+            next:
+              type: string
+              example: t83297d7785fd249bdb6543a850680e812ce11873df2d48467cb9612dbd0482bf
+              description: Which element to perform after this task, cannot point back to itself! And will only be present in instances not in the generation step. This has the same
+                This will need to opint to an instanceID of another task or experiment.
+            instanceID:
+              type: string
+              example: t83297d7785fd249bdb6543a850680e812ce11873df2d48467cb9612dbd0482bf
+              description: The Unique ID of this element within its project. This is a string of the form "\w + sha256" where \w depends on the type of object. (e.g. t for task, e for experiment etc.) This ID must be unique for each element (or subelement in a project and in an experiment. i.e. two experiments in the same project cannot have elements with the same instanceID)     
+    SubExperimentProperties:
+      type: object
+      properties:
+        elements:
+          type: array
+          items:
+            type: object
+            properties: 
+              elementType: 
+                type: string
+                description: either "experiment" or "task" or "filter"
+              data:
+                description: one of either task or experiment or filter (as defined by the elementtype). Experiments are expected to be not nested for more than one level. The first element in this 
+                oneOf:
+                  - $ref: '#/components/schemas/TaskInstance'
+                  - $ref: '#/components/schemas/FilterInstance'
+          description: Instances of tasks, further experiments or Filters, need to have instance IDs etc pp project back-reference, etc. The first element in this list will be assumed to be the starting element for this Experiment. Any element that does NOT have a next element being set will be assumed to be an end element. After which the instantiated experiments "next" element is called.
+        randomize: 
+          type: boolean
+          description: Whether the order of execution of the tasks in this experiment is randomized. If they are, no item in elements is allowed to be a filter. If randomized, all tasks and experiments in this experiment must point to this experiment as their next item. 
+  responses:
+    UnauthorizedError:
+      description: User is not authenticated.      
+    UserExists:  
+      description: User already exists
+      content:
+        application/json:
+          schema:
+            type: object
+            properties: 
+              reason:
+                type: string
+                example: 'Username already exists'  
+    UserDoesNotExist:
+      description: User does not exist
+      content:
+        application/json:
+          schema:
+            type: object
+            properties: 
+              reason:
+                type: string
+                example: 'Specified user does not exist'
+    ResourceDoesNotExist:
+      description: Requested resource does not exist (invalid version or uuid)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties: 
+              reason:
+                type: string
+                example: 'The requested task/project/experiment or the specified version does not exst'                
+
+    ObjectUpdated:
+      description: Update of Object successful, providing new version gitid.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              version: 
+                type: string
+                description: the new version id of the updated Object. This will be a git commit hash.
